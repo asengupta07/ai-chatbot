@@ -1,102 +1,66 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
-import useSWR, { useSWRConfig } from "swr";
+import { useState } from "react";
 import { ChatHeader } from "@/components/chat-header";
-import { useAutoResume } from "@/hooks/use-auto-resume";
 import type { ChatMessage } from "@/lib/types";
-import { fetcher, fetchWithErrorHandlers, generateUUID } from "@/lib/utils";
+import { generateUUID } from "@/lib/utils";
 import { Messages } from "./messages";
 import { MultimodalInput } from "./multimodal-input";
-import { toast } from "./toast";
+
+const DUMMY_MESSAGES: ChatMessage[] = [
+  {
+    id: generateUUID(),
+    role: "user" as const,
+    parts: [{ type: "text", text: "Hey! How's your day going?" }],
+  },
+  {
+    id: generateUUID(),
+    role: "assistant" as const,
+    parts: [{ type: "text", text: "Great! Just working on some cool projects. You?" }],
+  },
+  {
+    id: generateUUID(),
+    role: "user" as const,
+    parts: [{ type: "text", text: "Pretty good! Can't wait for the weekend 😄" }],
+  },
+  {
+    id: generateUUID(),
+    role: "assistant" as const,
+    parts: [{ type: "text", text: "Same here! Any plans?" }],
+  },
+];
 
 export function Chat({
   id,
-  initialMessages,
+  initialMessages = DUMMY_MESSAGES,
   initialVisibilityType,
-  isReadonly,
-  autoResume,
+  isReadonly = false,
   participantId,
 }: {
   id: string;
-  initialMessages: ChatMessage[];
+  initialMessages?: ChatMessage[];
   initialVisibilityType: string;
-  isReadonly: boolean;
-  autoResume: boolean;
+  isReadonly?: boolean;
   participantId: string;
 }) {
-  const router = useRouter();
-  const { mutate } = useSWRConfig();
-
-  useEffect(() => {
-    const handlePopState = () => {
-      router.refresh();
-    };
-
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, [router]);
-
   const [input, setInput] = useState<string>("");
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
-  const [status, setStatus] = useState<"connected" | "pending" | "error">(
+  const [status] = useState<"connected" | "pending" | "error">(
     "connected"
   );
 
-  const sendMessage = async (message: ChatMessage) => {
-    try {
-      setStatus("pending");
-      setMessages((prev) => [...prev, message]);
-
-      const response = await fetchWithErrorHandlers("/api/chat", {
-        method: "POST",
-        body: JSON.stringify({
-          id,
-          message,
-          participantId,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to send message");
-      }
-
-      setStatus("connected");
-      mutate(`/api/messages?chatId=${id}`);
-    } catch (error) {
-      setStatus("error");
-      toast({
-        type: "error",
-        description: "Failed to send message",
-      });
-      setMessages((prev) => prev.slice(0, -1));
-    }
-  };
-
-  const searchParams = useSearchParams();
-  const query = searchParams.get("query");
-  const [hasAppendedQuery, setHasAppendedQuery] = useState(false);
-
-  useEffect(() => {
-    if (query && !hasAppendedQuery) {
-      sendMessage({
+  const sendMessage = (message: ChatMessage) => {
+    setMessages((prev) => [...prev, message]);
+    
+    // Simulate a response after a short delay
+    setTimeout(() => {
+      setMessages((prev) => [...prev, {
         id: generateUUID(),
-        role: "user" as const,
-        parts: [{ type: "text", text: query }],
-      });
-
-      setHasAppendedQuery(true);
-      window.history.replaceState({}, "", `/chat/${id}`);
-    }
-  }, [query, hasAppendedQuery, id]);
-
-  useAutoResume({
-    autoResume,
-    initialMessages,
-    resumeStream: () => {},
-    setMessages,
-  });
+        role: "assistant" as const,
+        parts: [{ type: "text", text: "That sounds great! 👍" }],
+      }]);
+    }, 800);
+  };
 
   return (
     <div className="overscroll-behavior-contain flex h-dvh min-w-0 touch-pan-y flex-col bg-background">

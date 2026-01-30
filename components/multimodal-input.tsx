@@ -96,10 +96,8 @@ function PureMultimodalInput({
     setInput(event.target.value);
   };
 
-  const submitForm = useCallback(async () => {
+  const submitForm = useCallback(() => {
     if (!input.trim()) return;
-
-    window.history.pushState({}, "", `/chat/${chatId}`);
 
     const message: ChatMessage = {
       id: generateUUID(),
@@ -112,7 +110,7 @@ function PureMultimodalInput({
       ],
     };
 
-    await sendMessage(message);
+    sendMessage(message);
 
     setLocalStorageInput("");
     resetHeight();
@@ -127,7 +125,6 @@ function PureMultimodalInput({
     sendMessage,
     setLocalStorageInput,
     width,
-    chatId,
     resetHeight,
   ]);
 
