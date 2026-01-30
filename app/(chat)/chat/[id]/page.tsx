@@ -1,11 +1,8 @@
-import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { auth } from "@/app/(auth)/auth";
 import { Chat } from "@/components/chat";
-import { DataStreamHandler } from "@/components/data-stream-handler";
-import { DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
 import { getChatById, getMessagesByChatId } from "@/lib/db/queries";
 import { convertToUIMessages } from "@/lib/utils";
 
@@ -36,7 +33,10 @@ async function ChatPage({ params }: { params: Promise<{ id: string }> }) {
       return notFound();
     }
 
-    if (session.user.id !== chat.userId) {
+    if (
+      session.user.id !== chat.userId &&
+      session.user.id !== chat.participantId
+    ) {
       return notFound();
     }
   }
@@ -47,36 +47,21 @@ async function ChatPage({ params }: { params: Promise<{ id: string }> }) {
 
   const uiMessages = convertToUIMessages(messagesFromDb);
 
-  const cookieStore = await cookies();
-  const chatModelFromCookie = cookieStore.get("chat-model");
+  const isReadonly =
+    session?.user?.id !== chat.userId &&
+    session?.user?.id !== chat.participantId;
 
-  if (!chatModelFromCookie) {
-    return (
-      <>
-        <Chat
-          autoResume={true}
-          id={chat.id}
-          initialChatModel={DEFAULT_CHAT_MODEL}
-          initialMessages={uiMessages}
-          initialVisibilityType={chat.visibility}
-          isReadonly={session?.user?.id !== chat.userId}
-        />
-        <DataStreamHandler />
-      </>
-    );
-  }
+  const participantId =
+    session.user.id === chat.userId ? chat.participantId : chat.userId;
 
   return (
-    <>
-      <Chat
-        autoResume={true}
-        id={chat.id}
-        initialChatModel={chatModelFromCookie.value}
-        initialMessages={uiMessages}
-        initialVisibilityType={chat.visibility}
-        isReadonly={session?.user?.id !== chat.userId}
-      />
-      <DataStreamHandler />
-    </>
+    <Chat
+      autoResume={true}
+      id={chat.id}
+      initialMessages={uiMessages}
+      initialVisibilityType={chat.visibility}
+      isReadonly={isReadonly}
+      participantId={participantId}
+    />
   );
 }

@@ -1,35 +1,23 @@
-import type { UseChatHelpers } from "@ai-sdk/react";
 import { ArrowDownIcon } from "lucide-react";
 import { useMessages } from "@/hooks/use-messages";
-import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
-import { useDataStream } from "./data-stream-provider";
 import { Greeting } from "./greeting";
-import { PreviewMessage, ThinkingMessage } from "./message";
+import { PreviewMessage } from "./message";
 
 type MessagesProps = {
-  addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
   chatId: string;
-  status: UseChatHelpers<ChatMessage>["status"];
-  votes: Vote[] | undefined;
+  status: "connected" | "pending" | "error";
   messages: ChatMessage[];
-  setMessages: UseChatHelpers<ChatMessage>["setMessages"];
-  regenerate: UseChatHelpers<ChatMessage>["regenerate"];
+  setMessages: (messages: ChatMessage[]) => void;
   isReadonly: boolean;
-  isArtifactVisible: boolean;
-  selectedModelId: string;
 };
 
 function PureMessages({
-  addToolApprovalResponse,
   chatId,
   status,
-  votes,
   messages,
   setMessages,
-  regenerate,
   isReadonly,
-  selectedModelId: _selectedModelId,
 }: MessagesProps) {
   const {
     containerRef: messagesContainerRef,
@@ -40,8 +28,6 @@ function PureMessages({
   } = useMessages({
     status,
   });
-
-  useDataStream();
 
   return (
     <div className="relative flex-1">
@@ -54,33 +40,17 @@ function PureMessages({
 
           {messages.map((message, index) => (
             <PreviewMessage
-              addToolApprovalResponse={addToolApprovalResponse}
               chatId={chatId}
-              isLoading={
-                status === "streaming" && messages.length - 1 === index
-              }
+              isLoading={status === "pending" && messages.length - 1 === index}
               isReadonly={isReadonly}
               key={message.id}
               message={message}
-              regenerate={regenerate}
               requiresScrollPadding={
                 hasSentMessage && index === messages.length - 1
               }
               setMessages={setMessages}
-              vote={
-                votes
-                  ? votes.find((vote) => vote.messageId === message.id)
-                  : undefined
-              }
             />
           ))}
-
-          {status === "submitted" &&
-            !messages.some((msg) =>
-              msg.parts?.some(
-                (part) => "state" in part && part.state === "approval-responded"
-              )
-            ) && <ThinkingMessage />}
 
           <div
             className="min-h-[24px] min-w-[24px] shrink-0"

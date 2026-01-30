@@ -1,6 +1,5 @@
 "use client";
 
-import type { UseChatHelpers } from "@ai-sdk/react";
 import {
   type Dispatch,
   type SetStateAction,
@@ -9,7 +8,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { deleteTrailingMessages } from "@/app/(chat)/actions";
 import type { ChatMessage } from "@/lib/types";
 import { getTextFromMessage } from "@/lib/utils";
 import { Button } from "./ui/button";
@@ -18,15 +16,13 @@ import { Textarea } from "./ui/textarea";
 export type MessageEditorProps = {
   message: ChatMessage;
   setMode: Dispatch<SetStateAction<"view" | "edit">>;
-  setMessages: UseChatHelpers<ChatMessage>["setMessages"];
-  regenerate: UseChatHelpers<ChatMessage>["regenerate"];
+  setMessages: (messages: ChatMessage[]) => void;
 };
 
 export function MessageEditor({
   message,
   setMode,
   setMessages,
-  regenerate,
 }: MessageEditorProps) {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
@@ -80,10 +76,6 @@ export function MessageEditor({
           onClick={async () => {
             setIsSubmitting(true);
 
-            await deleteTrailingMessages({
-              id: message.id,
-            });
-
             setMessages((messages) => {
               const index = messages.findIndex((m) => m.id === message.id);
 
@@ -93,18 +85,18 @@ export function MessageEditor({
                   parts: [{ type: "text", text: draftContent }],
                 };
 
-                return [...messages.slice(0, index), updatedMessage];
+                return [...messages.slice(0, index + 1), updatedMessage];
               }
 
               return messages;
             });
 
             setMode("view");
-            regenerate();
+            setIsSubmitting(false);
           }}
           variant="default"
         >
-          {isSubmitting ? "Sending..." : "Send"}
+          {isSubmitting ? "Saving..." : "Save"}
         </Button>
       </div>
     </div>
